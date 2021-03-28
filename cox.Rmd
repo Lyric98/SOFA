@@ -1,0 +1,204 @@
+---
+title: "cox"
+author: "Yanran"
+date: "2021/2/24"
+output: html_document
+---
+
+```{r components binary}
+mdat2 <- read.csv('mdat2.csv',header=T)
+basedata = unique(mdat2[,c("stay_id", "ethnicity", "sex", "age_div10", "icu_day","icu_died", "U_sepsis")])
+ldat = mdat2[,c("stay_id","hr", "respiration_24hours_b", "coagulation_24hours_b", "liver_24hours_b", "cns_24hours_b", "renal_24hours_b", "cardiovascular_24hours_b")]
+
+newdata = tmerge(basedata, basedata, id=stay_id, death = event(icu_day, icu_died))
+tdata <- tmerge(newdata, ldat, id=stay_id, respiration_tdc = tdc(hr/24, respiration_24hours_b), coagulation_tdc = tdc(hr/24, coagulation_24hours_b), liver_tdc = tdc(hr/24, liver_24hours_b), cns_tdc = tdc(hr/24, cns_24hours_b), renal_tdc = tdc(hr/24, renal_24hours_b), cardiovascular_tdc = tdc(hr/24, cardiovascular_24hours_b))
+
+tdfit <- coxph(Surv(tstart, tstop, death) ~ age_div10 + sex + as.factor(ethnicity) + U_sepsis + respiration_tdc + coagulation_tdc + liver_tdc + cns_tdc + renal_tdc + cardiovascular_tdc, data=tdata)
+summary(tdfit)
+zp <- cox.zph(tdfit)
+print(cox.zph(tdfit))
+```
+
+```{r components score}
+ldat_score = mdat2[,c("stay_id","hr", "respiration_24hours", "coagulation_24hours", "liver_24hours", "cns_24hours", "renal_24hours", "cardiovascular_24hours")]
+tdata_score <- tmerge(newdata, ldat_score, id=stay_id, respiration_tdc = tdc(hr/24, respiration_24hours), coagulation_tdc = tdc(hr/24, coagulation_24hours), liver_tdc = tdc(hr/24, liver_24hours), cns_tdc = tdc(hr/24, cns_24hours), renal_tdc = tdc(hr/24, renal_24hours), cardiovascular_tdc = tdc(hr/24, cardiovascular_24hours))
+
+tdfit_score <- coxph(Surv(tstart, tstop, death) ~ age_div10 + sex + as.factor(ethnicity) + U_sepsis + respiration_tdc + coagulation_tdc + liver_tdc + cns_tdc + renal_tdc + cardiovascular_tdc, data=tdata_score)
+summary(tdfit_score)
+zp_score <- cox.zph(tdfit_score, terms=FALSE)
+print(zp_score)
+
+plot(zp_score[9]) 
+abline(0,0, col=2)
+abline(h= tdfit_score$coef["respiration_tdc"], col=3, lwd=2, lty=2)
+
+plot(zp_score[10]) 
+abline(0,0, col=2)
+abline(h= tdfit_score$coef["coagulation_tdc"], col=3, lwd=2, lty=2)
+
+plot(zp_score[11]) 
+abline(0,0, col=2)
+abline(h= tdfit_score$coef["liver_tdc"], col=3, lwd=2, lty=2)
+
+plot(zp_score[12]) 
+abline(0,0, col=2)
+abline(h= tdfit_score$coef["cns_tdc"], col=3, lwd=2, lty=2)
+
+plot(zp_score[13]) 
+abline(0,0, col=2)
+abline(h= tdfit_score$coef["renal_tdc"], col=3, lwd=2, lty=2)
+
+plot(zp_score[14]) 
+abline(0,0, col=2)
+abline(h= tdfit_score$coef["cardiovascular_tdc"], col=3, lwd=2, lty=2)
+```
+
+```{r 5 day components score}
+tdata_score5 <- tdata_score[tdata_score$icu_day <= 5,]
+tdfit_score5 <- coxph(Surv(tstart, tstop, death) ~ age_div10 + sex + as.factor(ethnicity) + U_sepsis + respiration_tdc + coagulation_tdc + liver_tdc + cns_tdc + renal_tdc + cardiovascular_tdc, data=tdata_score5)
+summary(tdfit_score5)
+
+zp_score5 <- cox.zph(tdfit_score5, terms = FALSE)
+print(zp_score5)
+
+plot(zp_score5[9]) 
+abline(0,0, col=2)
+abline(h= tdfit_score5$coef["respiration_tdc"], col=3, lwd=2, lty=2)
+
+plot(zp_score5[10]) 
+abline(0,0, col=2)
+abline(h= tdfit_score5$coef["coagulation_tdc"], col=3, lwd=2, lty=2)
+
+plot(zp_score5[11]) 
+abline(0,0, col=2)
+abline(h= tdfit_score5$coef["liver_tdc"], col=3, lwd=2, lty=2)
+
+plot(zp_score5[12]) 
+abline(0,0, col=2)
+abline(h= tdfit_score5$coef["cns_tdc"], col=3, lwd=2, lty=2)
+
+plot(zp_score5[13]) 
+abline(0,0, col=2)
+abline(h= tdfit_score5$coef["renal_tdc"], col=3, lwd=2, lty=2)
+
+plot(zp_score5[14]) 
+abline(0,0, col=2)
+abline(h= tdfit_score5$coef["cardiovascular_tdc"], col=3, lwd=2, lty=2)
+```
+
+
+```{r sofa score}
+ldat_sofa = mdat2[,c("stay_id","hr", "sofa_24hours")]
+newdata = tmerge(basedata, basedata, id=stay_id, death = event(icu_day, icu_died))
+tdata_sofa <- tmerge(newdata, ldat_sofa, id=stay_id, sofa_total = tdc(hr/24, sofa_24hours))
+
+tdfit_sofa <- coxph(Surv(tstart, tstop, death) ~ age_div10 + sex + as.factor(ethnicity) + U_sepsis + sofa_total, data=tdata_sofa)
+summary(tdfit_sofa)
+zp_sofa <- cox.zph(tdfit_sofa, terms = FALSE)
+print(zp_sofa)
+
+plot(zp_sofa[9]) # a plot for the 10th variable in the fit
+abline(0,0, col=2)
+abline(h= tdfit_sofa$coef["sofa_total"], col=3, lwd=2, lty=2)
+
+
+tdata_sofa_5 <- tdata_sofa[tdata_sofa$icu_day <= 5,]
+tdfit_sofa_5 <- coxph(Surv(tstart, tstop, death) ~ age_div10 + sex + as.factor(ethnicity) + U_sepsis + sofa_total, data=tdata_sofa_5)
+summary(tdfit_sofa_5)
+zp_sofa_5 <- cox.zph(tdfit_sofa_5, terms = FALSE)
+print(zp_sofa_5)
+
+plot(zp_sofa_5[9]) # a plot for the 10th variable in the fit
+abline(0,0, col=2)
+abline(h= tdfit_sofa_5$coef["sofa_total"], col=3, lwd=2, lty=2)
+
+
+```
+
+```{r sofa category}
+mdat_sofa <- mdat2 %>%
+  mutate(sofa_c = "Mid") %>%
+  mutate(sofa_b7 = ifelse(sofa_24hours < 8, 0, 1)) 
+
+mdat_sofa$sofa_c[which(mdat_sofa$sofa_24hours < 8)] <- "Low"
+mdat_sofa$sofa_c[which(mdat_sofa$sofa_24hours > 11)] <- "High"
+mdat_sofa$sofa_c <- factor(mdat_sofa$sofa_c, ordered = T, levels = c('Low', 'Mid', 'High'))
+mdat_sofa$sofa_c_n<- as.numeric(mdat_sofa$sofa_c)
+ldat_sofa_cn = mdat_sofa[,c("stay_id","hr", "sofa_c_n")]
+tdata_sofa_cn <- tmerge(newdata, ldat_sofa_cn, id=stay_id, sofa_tdc = tdc(hr/24, sofa_c_n))
+
+tdfit_sofa_cn <- coxph(Surv(tstart, tstop, death) ~ age_div10 + sex + as.factor(ethnicity) + U_sepsis + sofa_tdc, data=tdata_sofa_cn)
+summary(tdfit_sofa_cn)
+zp_sofa_cn <- cox.zph(tdfit_sofa_cn, terms = FALSE)
+print(zp_sofa_cn)
+
+plot(zp_sofa_cn[9]) # a plot for the 10th variable in the fit
+abline(0,0, col=2)
+abline(h= tdfit_sofa_cn$coef["sofa_tdc"], col=3, lwd=2, lty=2)
+
+
+tdata_sofa_cn5 <- tdata_sofa_cn[tdata_sofa_cn$icu_day <= 5,]
+tdfit_sofa_cn5 <- coxph(Surv(tstart, tstop, death) ~ age_div10 + sex + as.factor(ethnicity) + U_sepsis + sofa_tdc, data=tdata_sofa_cn5)
+summary(tdfit_sofa_cn5)
+zp_sofa_cn5 <- cox.zph(tdfit_sofa_cn5, terms = FALSE)
+print(zp_sofa_cn5)
+
+plot(zp_sofa_cn5[9]) # a plot for the 10th variable in the fit
+abline(0,0, col=2)
+abline(h= tdfit_sofa_cn5$coef["sofa_tdc"], col=3, lwd=2, lty=2)
+
+
+```
+
+
+
+```{r component poly3}
+tdfit_poly <- coxph(Surv(tstart, tstop, death) ~ age_div10 + sex + as.factor(ethnicity) + U_sepsis + poly(respiration_tdc,3) + poly(coagulation_tdc,3) + poly(liver_tdc,3) + poly(cns_tdc,3) + poly(renal_tdc,3) + poly(cardiovascular_tdc,3), data=tdata_score %>% filter(!is.na(respiration_tdc)))
+summary(tdfit_poly)
+anova(tdfit_poly, test = "Chisq")
+zp_sofa_poly <- cox.zph(tdfit_poly, terms = FALSE)
+
+print(zp_sofa_poly)
+
+# plot(zp_score5[9]) 
+# abline(0,0, col=2)
+# abline(h= tdfit_score5$coef["respiration_tdc"], col=3, lwd=2, lty=2)
+# 
+# plot(zp_score5[10]) 
+# abline(0,0, col=2)
+# abline(h= tdfit_score5$coef["coagulation_tdc"], col=3, lwd=2, lty=2)
+# 
+# plot(zp_score5[11]) 
+# abline(0,0, col=2)
+# abline(h= tdfit_score5$coef["liver_tdc"], col=3, lwd=2, lty=2)
+# 
+# plot(zp_score5[12]) 
+# abline(0,0, col=2)
+# abline(h= tdfit_score5$coef["cns_tdc"], col=3, lwd=2, lty=2)
+# 
+# plot(zp_score5[13]) 
+# abline(0,0, col=2)
+# abline(h= tdfit_score5$coef["renal_tdc"], col=3, lwd=2, lty=2)
+# 
+# plot(zp_score5[14]) 
+# abline(0,0, col=2)
+# abline(h= tdfit_score5$coef["cardiovascular_tdc"], col=3, lwd=2, lty=2)
+```
+
+
+```{r component poly4}
+tdfit_poly4 <- coxph(Surv(tstart, tstop, death) ~ age_div10 + sex + as.factor(ethnicity) + U_sepsis + poly(respiration_tdc,4) + poly(coagulation_tdc,4) + poly(liver_tdc,4) + poly(cns_tdc,4) + poly(renal_tdc,4) + poly(cardiovascular_tdc,4), data=tdata_score %>% filter(!is.na(respiration_tdc)))
+summary(tdfit_poly4)
+anova(tdfit_poly4, test = "Chisq")
+zp_sofa_poly4 <- cox.zph(tdfit_poly4, terms = FALSE)
+
+print(zp_sofa_poly4)
+
+
+```
+
+
+
+
+
+

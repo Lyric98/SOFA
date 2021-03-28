@@ -1,0 +1,139 @@
+---
+title: "table1~deadornot"
+author: "Yanran"
+date: "2020/10/30"
+output: html_document
+---
+```{r}
+library(boot)
+library(MatchIt)
+library(table1)
+library(dplyr)
+library(lubridate)
+```
+
+
+
+```{r}
+allpatients.sofa = read.csv("bq-results-20201108-093220-t0929hrtir4g.csv", header = TRUE)
+
+
+
+allpatients.sofa <- mutate(allpatients.sofa, status = ifelse(deathtime == "" | ymd_hms(allpatients.sofa$deathtime) - ymd_hms(allpatients.sofa$outtime) > ddays(1), "Alive", "Died"), U_sepsis = ifelse(sepsis3 == "", 0, 1))
+
+
+allpatients.sofa$status <- as.factor(allpatients.sofa$status)
+
+allpatients.sofa$ethnicity <- factor(allpatients.sofa$ethnicity, levels=c("HISPANIC/LATINO", "BLACK/AFRICAN AMERICAN", "WHITE", "ASIAN", "AMERICAN INDIAN/ALASKA NATIVE", "UNABLE TO OBTAIN", "UNKNOWN", "OTHER"),  labels=c("HISPANIC/LATINO", "BLACK/AFRICAN AMERICAN", "WHITE", "ASIAN", "AMERICAN INDIAN/ALASKA NATIVE", "UNKNOWN","UNKNOWN","UNKNOWN"))
+
+allpatients.sofa$admission_location <- factor(allpatients.sofa$admission_location, levels=c("WALK-IN/SELF REFERRAL", "EMERGENCY ROOM", "TRANSFER FROM HOSPITAL", "INFORMATION NOT AVAILABLE", "PHYSICIAN REFERRAL", "TRANSFER FROM SKILLED NURSING FACILITY", "PACU", "PROCEDURE SITE", "CLINIC REFERRAL","AMBULATORY SURGERY TRANSFER", "INTERNAL TRANSFER TO OR FROM PSYCH"),  labels=c("ER/SELF", "ER/SELF", "TRANSFER", "OTHERS", "REFERRAL", "REFERRAL", "TRANSFER", "ER/SELF", "REFERRAL","REFERRAL", "TRANSFER"))
+
+# if (allpatients.sofa$ethnicity == "OTHER" | "UNABLE TO OBTAIN" | "UNKNOWN") {
+#   allpatients.sofa$ethnicity <- "OTHER"
+# }
+
+
+# for (i in length(allpatients.sofa$ethnicity)){
+#   if (allpatients.sofa$ethnicity[i] == "OTHER" | allpatients.sofa$ethnicity[i] =="UNABLE TO OBTAIN" | allpatients.sofa$ethnicity[i] =="UNKNOWN") replace(allpatients.sofa$ethnicity[i], "A"
+# }
+
+
+
+# table1(~factor(gender) + anchor_age + factor(ethnicity) + los +  factor(admission_location) + respiration_24hours + coagulation_24hours + liver_24hours + cardiovascular_24hours + cns_24hours + renal_24hours + U_sepsis | status, data = allpatients.sofa)
+
+
+
+determinedT1 <- table1(~factor(gender) + anchor_age + factor(ethnicity) + los +  factor(admission_location) + respiration_24hours + coagulation_24hours + liver_24hours + cardiovascular_24hours + cns_24hours + renal_24hours + U_sepsis | status, data = allpatients.sofa, render.continuous=c(.="Mean (SD)"))
+
+```
+
+
+
+```{r}
+allpatients.sofa = read.csv("bq-results-20201108-093220-t0929hrtir4g.csv", header = TRUE)
+
+
+allpatients.sofa$ethnicity <- factor(allpatients.sofa$ethnicity, levels=c("HISPANIC/LATINO", "BLACK/AFRICAN AMERICAN", "WHITE", "ASIAN", "AMERICAN INDIAN/ALASKA NATIVE", "UNABLE TO OBTAIN", "UNKNOWN", "OTHER"),  labels=c("HISPANIC/LATINO", "BLACK/AFRICAN AMERICAN", "WHITE", "ASIAN", "AMERICAN INDIAN/ALASKA NATIVE", "UNKNOWN","UNKNOWN","UNKNOWN"))
+
+allpatients.sofa <- mutate(allpatients.sofa, hospital_mortality = ifelse(deathtime == "", "Alive", "Died"), U_sepsis = ifelse(sepsis3 == "", 0, 1))
+
+
+allpatients.sofa$hospital_mortality <- as.factor(allpatients.sofa$hospital_mortality)
+
+label(allpatients.sofa$anchor_age) <- "Age"
+label(allpatients.sofa$gender) <- "Female"
+label(allpatients.sofa$hospital_mortality) <- "Hospital Mortality"
+label(allpatients.sofa$los) <- "los"
+
+my.render.cat <- function(x) {
+    c("", sapply(stats.default(x), function(y) with(y,
+        sprintf("%d (%0.0f %%)", FREQ, PCT))))
+}
+
+labels <- list(
+    variables=list(age="Age",
+                   female="Female",
+                   hospital_mortality="Hospital Mortality",
+                   los="los"))
+
+table1(~anchor_age + factor(gender)
+       + factor(hospital_mortality) + los
+       | factor(ethnicity), data = allpatients.sofa,
+       render.continuous=c(.="Mean (SD)", .="Median [Q1-Q3]"), render.categorical=my.render.cat)
+
+
+```
+
+##24h
+
+```{r}
+all.24 = read.csv("./regression_model/bq-results-20201117-093602-ifih44o9ybpg.csv", header = TRUE)
+
+
+
+all.24 <- mutate(all.24, status = ifelse(deathtime == "" | ymd_hms(all.24$deathtime) - ymd_hms(all.24$outtime) > ddays(1), "Alive", "Died"), U_sepsis = ifelse(sepsis3 == "", 0, 1))
+
+
+all.24$status <- as.factor(all.24$status)
+
+all.24$ethnicity <- factor(all.24$ethnicity, levels=c("HISPANIC/LATINO", "BLACK/AFRICAN AMERICAN", "WHITE", "ASIAN", "AMERICAN INDIAN/ALASKA NATIVE", "UNABLE TO OBTAIN", "UNKNOWN", "OTHER"),  labels=c("HISPANIC/LATINO", "BLACK/AFRICAN AMERICAN", "WHITE", "ASIAN", "IND/AK NA", "UNKNOWN","UNKNOWN","UNKNOWN"))
+
+# all.24$admission_location <- factor(all.24$admission_location, levels=c("WALK-IN/SELF REFERRAL", "EMERGENCY ROOM", "TRANSFER FROM HOSPITAL", "INFORMATION NOT AVAILABLE", "PHYSICIAN REFERRAL", "TRANSFER FROM SKILLED NURSING FACILITY", "PACU", "PROCEDURE SITE", "CLINIC REFERRAL","AMBULATORY SURGERY TRANSFER", "INTERNAL TRANSFER TO OR FROM PSYCH"),  labels=c("ER/SELF", "ER/SELF", "TRANSFER", "OTHERS", "REFERRAL", "REFERRAL", "TRANSFER", "ER/SELF", "REFERRAL","REFERRAL", "TRANSFER"))
+
+#all.24$admission_type
+
+
+T1_24  <- table1(~factor(gender) + anchor_age + factor(ethnicity) +  factor(admission_type) + respiration_24hours + coagulation_24hours + liver_24hours + cardiovascular_24hours + cns_24hours + renal_24hours + U_sepsis | status, data = all.24, render.continuous=c(.="Mean (SD)"))
+
+T1_24
+
+```
+
+
+##48h
+
+```{r}
+all.48 = read.csv("./regression_model/bq-results-20201117-095501-pji7rcibgdmm.csv", header = TRUE)
+all.48 <- mutate(all.48, status = ifelse(deathtime == "" | ymd_hms(all.48$deathtime) - ymd_hms(all.48$outtime) > ddays(1), "Alive", "Died"), U_sepsis = ifelse(sepsis3 == "", 0, 1))
+all.48$status <- as.factor(all.48$status)
+all.48$ethnicity <- factor(all.48$ethnicity, levels=c("HISPANIC/LATINO", "BLACK/AFRICAN AMERICAN", "WHITE", "ASIAN", "AMERICAN INDIAN/ALASKA NATIVE", "UNABLE TO OBTAIN", "UNKNOWN", "OTHER"),  labels=c("HISPANIC/LATINO", "BLACK/AFRICAN AMERICAN", "WHITE", "ASIAN", "IND/AK NA", "UNKNOWN","UNKNOWN","UNKNOWN"))
+
+T1_48  <- table1(~factor(gender) + anchor_age + factor(ethnicity) +  factor(admission_type) + respiration_24hours + coagulation_24hours + liver_24hours + cardiovascular_24hours + cns_24hours + renal_24hours + U_sepsis | status, data = all.48, render.continuous=c(.="Mean (SD)"))
+
+T1_48
+```
+
+##72h
+
+```{r}
+all.72 = read.csv("./regression_model/bq-results-20201117-095931-co5c2wr35z1v.csv", header = TRUE)
+all.72 <- mutate(all.72, status = ifelse(deathtime == "" | ymd_hms(all.72$deathtime) - ymd_hms(all.72$outtime) > ddays(1), "Alive", "Died"), U_sepsis = ifelse(sepsis3 == "", 0, 1))
+all.72$status <- as.factor(all.72$status)
+all.72$ethnicity <- factor(all.72$ethnicity, levels=c("HISPANIC/LATINO", "BLACK/AFRICAN AMERICAN", "WHITE", "ASIAN", "AMERICAN INDIAN/ALASKA NATIVE", "UNABLE TO OBTAIN", "UNKNOWN", "OTHER"),  labels=c("HISPANIC/LATINO", "BLACK/AFRICAN AMERICAN", "WHITE", "ASIAN", "IND/AK NA", "UNKNOWN","UNKNOWN","UNKNOWN"))
+
+T1_72  <- table1(~factor(gender) + anchor_age + factor(ethnicity) +  factor(admission_type) + respiration_24hours + coagulation_24hours + liver_24hours + cardiovascular_24hours + cns_24hours + renal_24hours + U_sepsis | status, data = all.72, render.continuous=c(.="Mean (SD)"))
+
+T1_72
+```
+
+
